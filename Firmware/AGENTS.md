@@ -24,6 +24,7 @@ wakes on input change or an RTC heartbeat) and `kRouter` (always-on mesh relay).
 | `lib/Sleep/` | System ON sleep: RTC2 heartbeat + GPIOTE input-edge wake. |
 | `lib/Device/` | Cached chip id + RNG boot seed; owns `nrf.h` so Config does not. |
 | `lib/Log/` | Debug-build-only logging (namespace `logging`); no-ops in release. |
+| `lib/Telemetry/` | Router-only serial output of received mesh events (namespace `telemetry`); newline-delimited JSON. Excluded from sensor envs via `lib_ignore`. |
 | `test/` | Host Unity suites + `stubs/` for the `native` env. |
 | `docs/` | `architecture.md`, `packet.md`. |
 | `stepstodo.md` | Maintainability backlog (do not treat as done). |

@@ -1,0 +1,6 @@
+{
+  "name": "Telemetry",
+  "build": {
+    "flags": ["-Werror"]
+  }
+}

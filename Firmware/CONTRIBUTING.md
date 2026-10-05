@@ -56,7 +56,7 @@ cppcheck --enable=warning,performance,portability --error-exitcode=1 \
   --suppress=missingInclude --inline-suppr \
   -Ilib/Config/src -Ilib/Device/src -Ilib/Log/src -Ilib/Mesh/src \
   -Ilib/Power/src -Ilib/Radio/src -Ilib/Sensor/src -Ilib/Sleep/src \
-  -Itest/stubs src lib test                 # static analysis
+  -Ilib/Telemetry/src -Itest/stubs src lib test  # static analysis
 ```
 
 `pio test -e native` compiles the module logic against the stubs in

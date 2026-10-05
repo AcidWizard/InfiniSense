@@ -114,6 +114,12 @@ Three related names appear in the code. They are not interchangeable:
   `__PLATFORMIO_BUILD_DEBUG__` is set (the `<role>_debug` environments) and is a
   no-op in release. Use `pio run -e sensor_debug -t upload` then
   `pio device monitor` (115200 baud).
+- **Routers stream received packets as JSON on serial**, in both release and
+  debug builds. Each newly received (deduplicated) event is printed as one JSON
+  object per line: `{"src":…,"seq":…,"type":…,"len":…,"payload":"…"}` with the
+  payload hex encoded. The `Telemetry` library is router-only and is left out of
+  the sensor image. See
+  [`lib/Telemetry/src/telemetry.h`](lib/Telemetry/src/telemetry.h).
 - **A sensor sleeps between events**, so it looks "dead" most of the time. It
   wakes on an input change or the heartbeat (`config::kHeartbeatSeconds`,
   default 1 hour). Change the input to get an immediate report.
@@ -138,7 +144,8 @@ Firmware/
 │   ├── Radio/src/          # SX1262 wrapper
 │   ├── Power/src/          # versioned retained state, watchdog
 │   ├── Sensor/src/         # debounced GPIO sensor input
-│   └── Sleep/src/          # System ON sleep: RTC heartbeat + input-edge wake
+│   ├── Sleep/src/          # System ON sleep: RTC heartbeat + input-edge wake
+│   └── Telemetry/src/      # router-only JSON event stream over serial
 ├── test/                   # host Unity tests + native stubs
 └── docs/                   # architecture and protocol notes
 ```

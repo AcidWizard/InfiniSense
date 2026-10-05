@@ -35,6 +35,7 @@ sleep (or, for routers, from power-on to steady-state forwarding).
 | `mesh`   | `lib/Mesh/src/*`   | Packet construction, validation, dedup, rebroadcast, and an inbound event queue. Uses `radio` for I/O. |
 | `device` | `lib/Device/src/*` | Caches the chip id (`FICR->DEVICEID[0]`) and provides a per-boot RNG seed; keeps `nrf.h` out of `config.hpp`. |
 | `logging`| `lib/Log/src/*`    | Debug-build-only printf-style logging; compiled to no-ops in release. |
+| `telemetry`| `lib/Telemetry/src/*` | Router-only, always-on newline-delimited JSON on serial for each received event. Kept out of sensor builds via `lib_ignore`. |
 | `config` | `lib/Config/src/config.hpp` | Pin assignments, radio settings, mesh tuning, role enum and `static_assert`s. |
 
 Notes for newcomers:
@@ -50,8 +51,8 @@ Notes for newcomers:
 - **Inbound events are queued, not callback-driven.** `mesh::Handle()` validates
   a frame, dedups it, enqueues it with `mesh::PopEvent()` for the application,
   and only then decides whether to forward it. `main.cpp` drains the queue in
-  `DrainEvents()`; today it just logs, but that is where a node would *act* on
-  remote data.
+  `DrainEvents()`; today it streams each event to serial as JSON, but that is
+  where a node would *act* on remote data.
 - **Error reporting lives in `radio`.** Radio init, TX and RX failures are
   reported through `logging::Error()` (a no-op in release). `sensor` and `power`
   are direct GPIO/register access with no runtime failure modes to report.
@@ -102,6 +103,7 @@ setup()
    │
    ▼
 router branch
+   │  telemetry::Begin()             serial up in release too
    │  mesh::SetForward(true)
    │  radio::StartReceive()
    │

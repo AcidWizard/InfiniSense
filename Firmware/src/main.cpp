@@ -8,21 +8,23 @@
 #include "radio.h"
 #include "sensor.h"
 #include "sleep.h"
+#if NODE_ROLE == 1
+#include "telemetry.h"
+#endif
 
 // main.cpp: entry point. The only place the sensor/router flow branches.
 
 namespace {
 
 // Consume any events the mesh queued. There is no application behavior yet, so
-// this only reports them; real telemetry would act on Event here.
+// this only streams them to the serial host as JSON; real telemetry would act
+// on Event here too.
 void DrainEvents() {
   mesh::Event event;
   while (mesh::PopEvent(event)) {
-    logging::Info("event src=%u seq=%u type=%u len=%u",
-                  static_cast<unsigned>(event.source),
-                  static_cast<unsigned>(event.sequence),
-                  static_cast<unsigned>(event.type),
-                  static_cast<unsigned>(event.length));
+#if NODE_ROLE == 1
+    telemetry::EmitEvent(event);
+#endif
   }
 }
 
@@ -70,6 +72,11 @@ void setup() {
 
   if (config::kNodeRole == config::Role::kRouter) {
     // Routers are pure relays: they never sleep and keep the radio listening.
+    // Bring up serial here rather than relying on logging::Begin(), which is a
+    // no-op in release, so a flashed router streams received packets.
+#if NODE_ROLE == 1
+    telemetry::Begin();
+#endif
     power::StartWatchdog(config::kWatchdogRouterSeconds);
     mesh::SetForward(true);
     radio::StartReceive();

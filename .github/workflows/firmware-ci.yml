@@ -99,4 +99,4 @@ jobs:
           --suppress=missingInclude --inline-suppr
           -Ilib/Config/src -Ilib/Device/src -Ilib/Log/src -Ilib/Mesh/src
           -Ilib/Power/src -Ilib/Radio/src -Ilib/Sensor/src -Ilib/Sleep/src
-          -Itest/stubs src lib test
+          -Ilib/Telemetry/src -Itest/stubs src lib test
