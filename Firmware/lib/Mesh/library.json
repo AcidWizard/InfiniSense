@@ -1,0 +1,6 @@
+{
+  "name": "Mesh",
+  "build": {
+    "flags": ["-Werror"]
+  }
+}

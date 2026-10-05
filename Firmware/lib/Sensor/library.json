@@ -1,0 +1,6 @@
+{
+  "name": "Sensor",
+  "build": {
+    "flags": ["-Werror"]
+  }
+}

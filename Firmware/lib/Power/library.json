@@ -1,0 +1,6 @@
+{
+  "name": "Power",
+  "build": {
+    "flags": ["-Werror"]
+  }
+}

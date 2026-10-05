@@ -1,0 +1,6 @@
+{
+  "name": "Device",
+  "build": {
+    "flags": ["-Werror"]
+  }
+}

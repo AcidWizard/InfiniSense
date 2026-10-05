@@ -1,0 +1,7 @@
+# PlatformIO build artifacts and downloaded libraries.
+.pio/
+
+# Editor state. Everything under .vscode is machine-specific or generated
+# (c_cpp_properties.json and launch.json contain absolute paths), so none of it
+# is versioned. Portable recommendations live in CONTRIBUTING.md instead.
+.vscode/

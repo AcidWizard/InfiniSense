@@ -1,0 +1,5 @@
+---
+# Google C++ style, pinned to the language version this project builds with.
+# See https://google.github.io/styleguide/cppguide.html
+BasedOnStyle: Google
+Standard: c++11

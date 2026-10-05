@@ -1,0 +1,6 @@
+{
+  "name": "Sleep",
+  "build": {
+    "flags": ["-Werror"]
+  }
+}

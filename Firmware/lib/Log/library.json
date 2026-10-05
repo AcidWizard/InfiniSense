@@ -1,0 +1,6 @@
+{
+  "name": "Log",
+  "build": {
+    "flags": ["-Werror"]
+  }
+}

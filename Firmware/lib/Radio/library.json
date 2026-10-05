@@ -1,0 +1,6 @@
+{
+  "name": "Radio",
+  "build": {
+    "flags": ["-Werror"]
+  }
+}
