@@ -17,17 +17,17 @@ defaults:
 jobs:
   build:
     name: build ${{ matrix.env }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         env: [sensor_release, sensor_debug, router_release, router_debug]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-pio-${{ hashFiles('Firmware/platformio.ini') }}
@@ -37,13 +37,13 @@ jobs:
 
   test:
     name: host tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-pio-${{ hashFiles('Firmware/platformio.ini') }}
@@ -53,10 +53,10 @@ jobs:
 
   format:
     name: clang-format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install clang-format==23.1.2
@@ -64,9 +64,9 @@ jobs:
 
   static-analysis:
     name: cppcheck
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: sudo apt-get update && sudo apt-get install -y cppcheck
       - run: >
           cppcheck --enable=warning,performance,portability --error-exitcode=1
