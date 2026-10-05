@@ -1,5 +1,7 @@
 # InfiniSense
 
+[![Firmware CI](https://github.com/AcidWizard/InfiniSense/actions/workflows/firmware-ci.yml/badge.svg?branch=main)](https://github.com/AcidWizard/InfiniSense/actions/workflows/firmware-ci.yml)
+
 A capacitor-based energy-harvesting sensor that does not need a battery.
 
 An InfiniSense node wakes from deep sleep when its input changes, reports the
