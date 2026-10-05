@@ -1,0 +1,77 @@
+name: Firmware CI
+
+on:
+  push:
+    paths:
+      - "Firmware/**"
+      - ".github/workflows/firmware-ci.yml"
+  pull_request:
+    paths:
+      - "Firmware/**"
+      - ".github/workflows/firmware-ci.yml"
+
+defaults:
+  run:
+    working-directory: Firmware
+
+jobs:
+  build:
+    name: build ${{ matrix.env }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [sensor_release, sensor_debug, router_release, router_debug]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-pio-${{ hashFiles('Firmware/platformio.ini') }}
+          restore-keys: ${{ runner.os }}-pio-
+      - run: pip install platformio==6.2.0
+      - run: pio run -e ${{ matrix.env }}
+
+  test:
+    name: host tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-pio-${{ hashFiles('Firmware/platformio.ini') }}
+          restore-keys: ${{ runner.os }}-pio-
+      - run: pip install platformio==6.2.0
+      - run: pio test -e native
+
+  format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install clang-format==23.1.2
+      - run: clang-format --dry-run --Werror src/*.cpp lib/*/src/* test/*/*.cpp test/stubs/*.h
+
+  static-analysis:
+    name: cppcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - run: >
+          cppcheck --enable=warning,performance,portability --error-exitcode=1
+          --std=c++11 --language=c++ --suppress=missingIncludeSystem
+          --suppress=missingInclude --inline-suppr
+          -Ilib/Config/src -Ilib/Device/src -Ilib/Log/src -Ilib/Mesh/src
+          -Ilib/Power/src -Ilib/Radio/src -Ilib/Sensor/src -Ilib/Sleep/src
+          -Itest/stubs src lib test
