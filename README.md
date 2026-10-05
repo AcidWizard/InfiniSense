@@ -1,6 +1,9 @@
 # InfiniSense
 
 [![Firmware CI](https://github.com/AcidWizard/InfiniSense/actions/workflows/firmware-ci.yml/badge.svg?branch=main)](https://github.com/AcidWizard/InfiniSense/actions/workflows/firmware-ci.yml)
+[![host tests](https://github.com/AcidWizard/InfiniSense/actions/workflows/firmware-ci.yml/badge.svg?branch=main&job=host%20tests)](https://github.com/AcidWizard/InfiniSense/actions/workflows/firmware-ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
+[![PlatformIO](https://img.shields.io/badge/PlatformIO-supported-brightgreen.svg?logo=platformio)](https://platformio.org/)
 
 A capacitor-based energy-harvesting sensor that does not need a battery.
 
