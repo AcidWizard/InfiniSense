@@ -51,6 +51,31 @@ jobs:
       - run: pip install platformio==6.2.0
       - run: pio test -e native
 
+  coverage:
+    name: coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.platformio
+          key: ${{ runner.os }}-pio-${{ hashFiles('Firmware/platformio.ini') }}
+          restore-keys: ${{ runner.os }}-pio-
+      - run: pip install platformio==6.2.0 gcovr
+      - run: pio test -e native_coverage
+      - run: >
+          gcovr -r . --filter 'lib/' --filter 'src/'
+          --exclude 'test/' --exclude '.pio/'
+          --txt coverage.txt --html-details coverage.html --print-summary
+      - run: cat coverage.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: Firmware/coverage*
+
   format:
     name: clang-format
     runs-on: ubuntu-24.04

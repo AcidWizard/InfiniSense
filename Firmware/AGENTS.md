@@ -38,6 +38,7 @@ pio run -e sensor_debug
 pio run -e router_release
 pio run -e router_debug
 pio test -e native
+pio test -e native_coverage   # same tests, --coverage for gcovr
 pio run -e sensor_release -t upload
 pio device monitor
 ```

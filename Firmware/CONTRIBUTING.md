@@ -48,6 +48,9 @@ pio device monitor            # 115200 baud
 pio run                                     # compiles all four environments
 clang-format --dry-run --Werror src/*.cpp lib/*/src/* test/*/*.cpp test/stubs/*.h  # formatting check
 pio test -e native                          # host unit tests
+pio test -e native_coverage && \
+  gcovr -r . --filter 'lib/' --filter 'src/' \
+    --exclude 'test/' --exclude '.pio/'      # coverage report (gcovr)
 cppcheck --enable=warning,performance,portability --error-exitcode=1 \
   --std=c++11 --language=c++ --suppress=missingIncludeSystem \
   --suppress=missingInclude --inline-suppr \
