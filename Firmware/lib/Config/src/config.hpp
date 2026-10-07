@@ -67,12 +67,12 @@ constexpr bool kLoRaHasRxEn = false;
 constexpr uint32_t kHeartbeatSeconds = 150;
 
 constexpr uint32_t kLoRaFreqKhz = 868000;
-// 62.5 kHz buys +3 dB of sensitivity (range) over 125 kHz for 2x the airtime.
-constexpr float kLoRaBwKhz = 62.5f;
-// Long-range, energy-aware preset: SF12 at 62.5 kHz. Narrow bandwidth buys
-// sensitivity more cheaply than SF (3 dB vs 2.5 dB per airtime doubling) and
-// CR 4/5 keeps the airtime overhead minimal. Raise kLoRaTxDbm toward 22 for
-// maximum range at ~4x the TX current.
+// 250 kHz halves the airtime (and energy per report) versus 125 kHz at the
+// cost of ~3 dB of sensitivity. Energy is the priority here.
+constexpr float kLoRaBwKhz = 250.0f;
+// SF12 for range; the wide bandwidth keeps each report short. CR 4/5 keeps
+// the airtime overhead minimal. Raise kLoRaTxDbm toward 22 for more range at
+// ~4x the TX current.
 constexpr uint8_t kLoRaSf = 12;
 constexpr uint8_t kLoRaCr = 5;
 constexpr uint8_t kLoRaSyncWord = 0x12;

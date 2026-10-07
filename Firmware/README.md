@@ -13,7 +13,8 @@ framework and [RadioLib](https://github.com/jgromes/RadioLib) driving an
 
 > New here? Read this page, then [`docs/architecture.md`](docs/architecture.md)
 > for how the modules fit together and [`docs/packet.md`](docs/packet.md) for
-> the over-the-air protocol.
+> the over-the-air protocol. Bring-up and power-debugging notes live in
+> [`docs/worklog.md`](docs/worklog.md).
 
 ## Node roles
 
@@ -58,7 +59,7 @@ TCXO is 1.8 V and DIO2 drives the RF switch.
 | SX1262 BUSY   | `kLoRaBusy` = 7 | `kLoRaBusy` = 3 (D3) | |
 | SX1262 RXEN   | — (DIO2 only) | `kLoRaRxEn` = 5 (D5) | Wio-SX1262 RX-path enable; driven high to receive. DIO2 drives the TX path. |
 
-Radio defaults: **868.0 MHz**, bandwidth 62.5 kHz, spreading factor 12, coding
+Radio defaults: **868.0 MHz**, bandwidth 250 kHz, spreading factor 12, coding
 rate 4/5, sync word `0x12`, TX power 14 dBm, preamble 8, TCXO 1.6 V (1.8 V on
 the XIAO). These are shared by every node and must match for nodes to hear each
 other.
@@ -188,7 +189,7 @@ Firmware/
 │   ├── Sleep/src/          # System ON sleep: tickless (XIAO) / RTC2+WFI (DK)
 │   └── Telemetry/src/      # router-only JSON event stream over serial
 ├── test/                   # host Unity tests + native stubs
-└── docs/                   # architecture and protocol notes
+└── docs/                   # architecture, protocol and worklog notes
 ```
 
 ## License
