@@ -170,9 +170,9 @@ bool Handle(const uint8_t* data, size_t length) {
   memcpy(buffer, &header, sizeof(header));
 
   radio::Send(buffer, total);
-  // Send() leaves the radio in standby; resume listening so later packets are
-  // still relayed. A node that only received does not need this.
-  radio::StartReceive();
+  // Send() leaves the radio in standby; the caller re-arms receive once
+  // Handle() returns, covering this forward path and the duplicate/invalid
+  // paths alike.
   return true;
 }
 

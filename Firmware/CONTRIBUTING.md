@@ -38,6 +38,15 @@ pio run -e sensor_release -t upload
 pio device monitor            # 115200 baud
 ```
 
+For the Seeed XIAO nRF52840 + Wio-SX1262, build the `router_xiao` environment;
+it uses the Seeed/Adafruit core so `Serial` is USB-CDC and the upload goes over
+the XIAO bootloader instead of J-Link:
+
+```bash
+pio run -e router_xiao -t upload
+pio run -e router_xiao -t upload -t monitor   # reconnects after the DFU reset
+```
+
 ## Quality checks
 
 > **Status:** formatting, host unit tests and static analysis are wired up.

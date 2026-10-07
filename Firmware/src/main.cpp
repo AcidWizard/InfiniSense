@@ -14,6 +14,12 @@
 
 // main.cpp: entry point. The only place the sensor/router flow branches.
 
+// Temporary bench hook: skip radio init to isolate its contribution to sleep
+// current (see bench/sleep_test). Off in every normal build.
+#ifndef SENSOR_SKIP_RADIO
+#define SENSOR_SKIP_RADIO 0
+#endif
+
 namespace {
 
 // Consume any events the mesh queued. There is no application behavior yet, so
@@ -62,12 +68,14 @@ void ReportState(bool force) {
 }  // namespace
 
 void setup() {
-  logging::Begin();
-  logging::Info("node=%u role=%d", static_cast<unsigned>(device::Id()),
-                static_cast<int>(config::kNodeRole));
+  LOG_BEGIN();
+  LOG_INFO("node=%u role=%d", static_cast<unsigned>(device::Id()),
+           static_cast<int>(config::kNodeRole));
 
   sensor::Begin(config::kPinSensor, config::kSensorActiveLow);
+#if !SENSOR_SKIP_RADIO
   radio::Begin();
+#endif
   mesh::Begin();
 
   if (config::kNodeRole == config::Role::kRouter) {
@@ -97,13 +105,21 @@ void loop() {
       uint8_t buffer[mesh::kMaxLength];
       const int length = radio::Recv(buffer, sizeof(buffer));
       if (length > 0) mesh::Handle(buffer, static_cast<size_t>(length));
+      // Re-arm unconditionally. Handle() only restarts RX on the forwarding
+      // path, so a duplicate, invalid or CRC-failed frame would otherwise stop
+      // the receiver from listening again.
+      radio::StartReceive();
     }
     DrainEvents();
+#if NODE_ROLE == 1
+    telemetry::Poll();
+#endif
     return;
   }
 
   // Sensor: sleep until the input toggles or the heartbeat fires, then report.
   const sleep::Wake reason = sleep::UntilEvent();
+  LOG_INFO("sensor wake reason=%d", static_cast<int>(reason));
   power::KickWatchdog();
   ReportState(reason == sleep::Wake::kRtc);
   radio::Sleep();

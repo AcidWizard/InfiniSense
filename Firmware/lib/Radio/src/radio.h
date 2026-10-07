@@ -8,6 +8,8 @@
 namespace radio {
 
 bool Begin();
+// True once Begin() has successfully initialized the radio.
+bool Ready();
 void Sleep();
 void StartReceive();
 bool Available();

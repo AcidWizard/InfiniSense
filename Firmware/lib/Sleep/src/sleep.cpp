@@ -1,10 +1,66 @@
 #include "sleep.h"
 
+// sleep.cpp: park the CPU between events.
+//
+// Two implementations, because the two supported cores differ:
+//
+//   SLEEP_TICKLESS (Seeed/Adafruit core, XIAO): the loop task blocks and the
+//   FreeRTOS tickless idle sleeps the CPU, so the 1 kHz RTOS tick does not keep
+//   restarting HFCLK. The GPIOTE input edge notifies the task and the heartbeat
+//   is the notification timeout.
+//
+//   otherwise (the DK core has no FreeRTOS): RTC2 compare for the heartbeat and
+//   a GPIOTE interrupt for the input, with the CPU parked in raw WFI.
+
+#if defined(SLEEP_TICKLESS)
+
+#include <Arduino.h>
+#include <FreeRTOS.h>
+#include <task.h>
+
+#include "log.h"
+
+namespace sleep {
+namespace {
+
+// Heartbeat period in RTOS ticks; also the notification timeout in UntilEvent.
+TickType_t heartbeat_ticks = 0;
+TaskHandle_t loop_task = nullptr;
+
+// GPIOTE priority is 3, which is at or below the FreeRTOS syscall ceiling, so
+// the FromISR API is safe here.
+void PinIsr() {
+  BaseType_t higher_priority = pdFALSE;
+  vTaskNotifyGiveFromISR(loop_task, &higher_priority);
+  portYIELD_FROM_ISR(higher_priority);
+}
+
+}  // namespace
+
+void Begin(uint32_t pin, uint32_t heartbeat_seconds) {
+  heartbeat_ticks = pdMS_TO_TICKS(heartbeat_seconds * 1000u);
+  loop_task = xTaskGetCurrentTaskHandle();
+  attachInterrupt(digitalPinToInterrupt(pin), PinIsr, CHANGE);
+  LOG_INFO("sleep begin pin=%u level=%d heartbeat=%u",
+           static_cast<unsigned>(pin), digitalRead(pin),
+           static_cast<unsigned>(heartbeat_seconds));
+}
+
+Wake UntilEvent() {
+  // Block until the input edge notifies us or the heartbeat elapses. Tickless
+  // idle parks the CPU (and stops HFCLK) for the whole period.
+  const uint32_t notified = ulTaskNotifyTake(pdTRUE, heartbeat_ticks);
+  return (notified == 0) ? Wake::kRtc : Wake::kPin;
+}
+
+}  // namespace sleep
+
+#else  // RTC2 + WFI (nrf52840_dk, no RTOS)
+
 #include <Arduino.h>
 #include <nrf.h>
 
-// sleep.cpp: RTC2 compare for the heartbeat and a GPIOTE interrupt for the
-// input, with the CPU parked in WFI between events.
+#include "log.h"
 
 namespace sleep {
 namespace {
@@ -31,6 +87,9 @@ extern "C" void RTC2_IRQHandler(void) {
 
 void Begin(uint32_t pin, uint32_t heartbeat_seconds) {
   attachInterrupt(digitalPinToInterrupt(pin), PinIsr, CHANGE);
+  LOG_INFO("sleep begin pin=%u level=%d heartbeat=%u",
+           static_cast<unsigned>(pin), digitalRead(pin),
+           static_cast<unsigned>(heartbeat_seconds));
 
   NRF_RTC2->TASKS_STOP = 1;
   NRF_RTC2->PRESCALER = kRtcPrescaler;
@@ -63,3 +122,5 @@ Wake UntilEvent() {
 }
 
 }  // namespace sleep
+
+#endif

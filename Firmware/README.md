@@ -5,10 +5,11 @@ sensor. Each device reports its input state over LoRa — when the input changes
 plus a periodic heartbeat — and sleeps between events. A self-forming mesh lets
 dedicated router nodes relay those events across a site.
 
-The firmware targets the **nRF52840** (currently the `nrf52840_dk` board) and is
-built with [PlatformIO](https://platformio.org/) using the Arduino framework and
-[RadioLib](https://github.com/jgromes/RadioLib) driving an **SX1262** LoRa
-transceiver.
+The firmware targets the **nRF52840** — the `nrf52840_dk` board by default, and
+the Seeed XIAO nRF52840 with a Wio-SX1262 via the `router_xiao` environment —
+and is built with [PlatformIO](https://platformio.org/) using the Arduino
+framework and [RadioLib](https://github.com/jgromes/RadioLib) driving an
+**SX1262** LoRa transceiver.
 
 > New here? Read this page, then [`docs/architecture.md`](docs/architecture.md)
 > for how the modules fit together and [`docs/packet.md`](docs/packet.md) for
@@ -23,7 +24,7 @@ by the numeric `NODE_ROLE` build flag (see
 
 | Role           | `NODE_ROLE` | Behavior |
 |----------------|-------------|----------|
-| **Sensor**     | `0` (`kSensor`) | Battery-free end device. Reports its input state on change and on a periodic heartbeat, sleeping in **System ON** (`WFI`) with the internal RTC between events. Woken by an input edge or the heartbeat (`config::kHeartbeatSeconds`). |
+| **Sensor**     | `0` (`kSensor`) | Battery-free end device. Reports its input state on change and on a periodic heartbeat, sleeping in **System ON** between events (the XIAO uses the core's FreeRTOS tickless idle; the DK uses RTC2 + `WFI`). Woken by an input edge or the heartbeat (`config::kHeartbeatSeconds`). |
 | **Router**     | `1` (`kRouter`) | Mains/always-powered relay. Stays awake, forwards mesh packets, and extends range between sensors and whoever consumes the data. |
 
 `MESH_FORWARD` sets the compile-time default for whether a node rebroadcasts
@@ -42,20 +43,25 @@ rules.
 
 ## Hardware / pin map
 
-Defaults live in [`lib/Config/src/config.hpp`](lib/Config/src/config.hpp) and can be
-overridden with `build_flags` in `platformio.ini` or per environment.
+Pin defaults live in [`lib/Config/src/config.hpp`](lib/Config/src/config.hpp)
+and are selected by the board's build macro: the `nrf52840_dk` column, or the
+Seeed XIAO nRF52840 + Wio-SX1262 for XIAO column when the XIAO board is used.
+On the XIAO the SPI bus is the core default (D8 SCK / D9 MISO / D10 MOSI), the
+TCXO is 1.8 V and DIO2 drives the RF switch.
 
-| Signal        | Default pin | Notes |
-|---------------|-------------|-------|
-| Sensor input  | `config::kPinSensor` = 2 | Wakes the sleeping sensor on an edge. Polarity set by `config::kSensorActiveLow` (false = active-high, true = active-low). |
-| SX1262 CS     | `config::kLoRaCs` = 10 | SPI chip select |
-| SX1262 DIO1   | `config::kLoRaDio1` = 9 | Interrupt / `Available()` |
-| SX1262 RESET  | `config::kLoRaReset` = 8 | |
-| SX1262 BUSY   | `config::kLoRaBusy` = 7 | |
+| Signal        | nrf52840_dk | XIAO + Wio-SX1262 | Notes |
+|---------------|-------------|-------------------|-------|
+| Sensor input  | `kPinSensor` = 2 | `kPinSensor` = 6 (D6) | Wakes the sleeping sensor on an edge. Polarity set by `kSensorActiveLow` (false = active-high, true = active-low). The router does not use it. |
+| SX1262 CS     | `kLoRaCs` = 10 | `kLoRaCs` = 4 (D4) | SPI chip select |
+| SX1262 DIO1   | `kLoRaDio1` = 9 | `kLoRaDio1` = 1 (D1) | Interrupt / `Available()` |
+| SX1262 RESET  | `kLoRaReset` = 8 | `kLoRaReset` = 2 (D2) | |
+| SX1262 BUSY   | `kLoRaBusy` = 7 | `kLoRaBusy` = 3 (D3) | |
+| SX1262 RXEN   | — (DIO2 only) | `kLoRaRxEn` = 5 (D5) | Wio-SX1262 RX-path enable; driven high to receive. DIO2 drives the TX path. |
 
-Radio defaults: **868.0 MHz**, bandwidth 125 kHz, spreading factor 9, coding
-rate 4/7, sync word `0x12`, TX power 14 dBm, preamble 8, TCXO 1.6 V. These are
-shared by every node and must match for nodes to hear each other.
+Radio defaults: **868.0 MHz**, bandwidth 62.5 kHz, spreading factor 12, coding
+rate 4/5, sync word `0x12`, TX power 14 dBm, preamble 8, TCXO 1.6 V (1.8 V on
+the XIAO). These are shared by every node and must match for nodes to hear each
+other.
 
 ## Building and flashing
 
@@ -79,6 +85,37 @@ pio device monitor            # 115200 baud
 
 An environment is named `<role>_<buildtype>`; roles are `sensor` and `router`,
 build types are `debug` and `release`.
+
+### Seeed XIAO nRF52840 + Wio-SX1262
+
+`router_xiao` and `sensor_xiao` build the two roles for the XIAO using the
+Seeed/Adafruit core, so `Serial` is the USB-CDC port and flashing goes through
+the XIAO bootloader over the serial port (nrfutil) instead of J-Link:
+
+```bash
+pio run -e router_xiao -t upload
+pio run -e router_xiao -t upload -t monitor   # reconnects after the DFU reset
+pio run -e sensor_xiao -t upload
+```
+
+`router_xiao_debug` and `sensor_xiao_debug` are the same images with
+`buildtype=debug`, so `logging` is compiled in and the radio prints its
+init/TX/RX status on the USB-CDC serial port. Handy when a board is silent:
+
+```bash
+pio run -e router_xiao_debug -t upload -t monitor
+pio run -e sensor_xiao_debug -t upload -t monitor
+```
+
+The XIAO sensor runs the same sleep/wake flow as the DK sensor: it reports once
+at boot, then parks in System ON sleep and wakes on an input edge or the
+`config::kHeartbeatSeconds` heartbeat to report again.
+
+After a DFU the XIAO re-enumerates its USB CDC under a new `ttyACM*` name; a
+post-upload hook waits for it so `-t monitor` reconnects without unplugging the
+board (see [platform-nordicnrf52#206](https://github.com/platformio/platform-nordicnrf52/issues/206)).
+If the board is already in bootloader mode it may enumerate under a different
+VID/PID, so pass `--upload-port /dev/ttyACM*` explicitly.
 
 ## Running a second node
 
@@ -120,9 +157,13 @@ Three related names appear in the code. They are not interchangeable:
   payload hex encoded. The `Telemetry` library is router-only and is left out of
   the sensor image. See
   [`lib/Telemetry/src/telemetry.h`](lib/Telemetry/src/telemetry.h).
+- **Routers also emit a liveness line** every `config::kStatusIntervalMs` (5 s)
+  so a host can tell the always-on router is running even with no traffic:
+  `{"status":"ok","node":…,"radio":…,"uptime_ms":…}` (`radio` is 1 once the
+  SX1262 initialized).
 - **A sensor sleeps between events**, so it looks "dead" most of the time. It
   wakes on an input change or the heartbeat (`config::kHeartbeatSeconds`,
-  default 1 hour). Change the input to get an immediate report.
+  default 2.5 minutes). Change the input to get an immediate report.
 - **Retained state** (the last reported level) survives a reset in the
   `GPREGRET` registers and is versioned, so a firmware change that alters its
   meaning is treated as a cold boot. See
@@ -144,7 +185,7 @@ Firmware/
 │   ├── Radio/src/          # SX1262 wrapper
 │   ├── Power/src/          # versioned retained state, watchdog
 │   ├── Sensor/src/         # debounced GPIO sensor input
-│   ├── Sleep/src/          # System ON sleep: RTC heartbeat + input-edge wake
+│   ├── Sleep/src/          # System ON sleep: tickless (XIAO) / RTC2+WFI (DK)
 │   └── Telemetry/src/      # router-only JSON event stream over serial
 ├── test/                   # host Unity tests + native stubs
 └── docs/                   # architecture and protocol notes

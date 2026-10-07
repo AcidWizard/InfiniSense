@@ -21,7 +21,7 @@ wakes on input change or an RTC heartbeat) and `kRouter` (always-on mesh relay).
 | `lib/Mesh/` | `packet.h` wire format; `mesh.*` validate/dedup/forward + event queue. |
 | `lib/Sensor/` | Digital input read/debounce. |
 | `lib/Power/` | Versioned retained state, watchdog (paused while asleep). |
-| `lib/Sleep/` | System ON sleep: RTC2 heartbeat + GPIOTE input-edge wake. |
+| `lib/Sleep/` | System ON sleep/`UntilEvent()`: FreeRTOS tickless idle on the XIAO, RTC2 + WFI on the DK; GPIOTE input-edge wake. |
 | `lib/Device/` | Cached chip id + RNG boot seed; owns `nrf.h` so Config does not. |
 | `lib/Log/` | Debug-build-only logging (namespace `logging`); no-ops in release. |
 | `lib/Telemetry/` | Router-only serial output of received mesh events (namespace `telemetry`); newline-delimited JSON. Excluded from sensor envs via `lib_ignore`. |
@@ -38,9 +38,14 @@ pio run -e sensor_release
 pio run -e sensor_debug
 pio run -e router_release
 pio run -e router_debug
+pio run -e router_xiao        # router for Seeed XIAO nRF52840 + Wio-SX1262
+pio run -e sensor_xiao        # sensor for Seeed XIAO nRF52840 + Wio-SX1262
+pio run -e router_xiao_debug  # router_xiao with logging compiled in
+pio run -e sensor_xiao_debug  # sensor_xiao with logging compiled in
 pio test -e native
 pio test -e native_coverage   # same tests, --coverage for gcovr
 pio run -e sensor_release -t upload
+pio run -e router_xiao -t upload   # flashes over the XIAO USB bootloader
 pio device monitor
 ```
 

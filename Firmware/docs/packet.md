@@ -162,13 +162,13 @@ malformed frame cannot occupy a dedup slot and suppress a later valid copy.
 ## Payload size and energy
 
 Larger payloads are now a caller choice rather than a code change, but they are
-not free. Using RadioLib's own `getTimeOnAir()` with the configured settings
-(SF9, BW125 kHz, CR 4/7, CRC on, preamble 8):
+not free. Using RadioLib's own `getTimeOnAir()` with the configured long-range
+settings (SF12, BW62.5 kHz, CR 4/5, CRC on, preamble 8):
 
 | Payload | Frame | Time on air (approx.) |
 |--------:|------:|----------------------:|
-| 1 B (current `kBinaryEvent`) | 10 B  | ~170 ms |
-| 100 B   | 109 B | ~800 ms |
+| 1 B (current `kBinaryEvent`) | 10 B  | ~2.0 s |
+| 100 B   | 109 B | ~8.5 s |
 
 For a capacitor-harvesting sensor, budget the energy and duty cycle before
 increasing payloads. If you need more than `mesh::kMaxPayload`, it must be split
@@ -176,6 +176,7 @@ across multiple frames at the application layer; the header's 8-bit `length`
 and the 255-byte LoRa limit are hard ceilings.
 
 > **Regulatory:** the 868 MHz band has duty-cycle limits (e.g. 1% for much of
-> the EU sub-band). At ~170 ms per `kBinaryEvent`, that allows only a handful
-> of sensor transmissions per minute on air, and each router rebroadcast counts
-> too. Check the local rules before deploying.
+> the EU sub-band). At ~2 s per `kBinaryEvent`, that allows only about 18
+> sensor transmissions per hour on air, and each router rebroadcast counts
+> too. Check the local rules before deploying. The 2.5-minute heartbeat alone
+> is ~24 frames/hour, so keep on-change events sparse.

@@ -11,6 +11,11 @@ namespace telemetry {
 
 void Begin();
 
+// Emit a periodic liveness line so a host can tell the always-on router is
+// running even when no mesh traffic arrives. Call once per loop(); it
+// rate-limits itself to config::kStatusIntervalMs. Plain ASCII, no colors.
+void Poll();
+
 // Emit one received event as a single newline-terminated JSON object. The
 // payload is hex encoded so arbitrary binary data stays on one line.
 void EmitEvent(const mesh::Event& event);

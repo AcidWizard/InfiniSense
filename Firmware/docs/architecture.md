@@ -30,7 +30,7 @@ sleep (or, for routers, from power-on to steady-state forwarding).
 | `main` | `src/main.cpp` | Ties everything together. Decides what happens based on `config::kNodeRole`. |
 | `sensor` | `lib/Sensor/src/*` | Reads and debounces the digital input; pull and polarity come from `Begin()`. |
 | `power`  | `lib/Power/src/*`  | Versioned retained state and the hardware watchdog (paused while asleep). |
-| `sleep`  | `lib/Sleep/src/*`  | Sensor System ON sleep: internal RTC (RTC2) heartbeat and GPIOTE input-edge wake via `UntilEvent()`. |
+| `sleep`  | `lib/Sleep/src/*`  | Sensor System ON sleep via `UntilEvent()`: FreeRTOS tickless idle on the XIAO, RTC2 + `WFI` on the DK; GPIOTE input-edge wake on both. |
 | `radio`  | `lib/Radio/src/*`  | Thin wrapper around the RadioLib `SX1262` object. Owns init, TX/RX, sleep; `Send()` leaves RX off, the caller resumes it. |
 | `mesh`   | `lib/Mesh/src/*`   | Packet construction, validation, dedup, rebroadcast, and an inbound event queue. Uses `radio` for I/O. |
 | `device` | `lib/Device/src/*` | Caches the chip id (`FICR->DEVICEID[0]`) and provides a per-boot RNG seed; keeps `nrf.h` out of `config.hpp`. |
@@ -56,10 +56,17 @@ Notes for newcomers:
 - **Error reporting lives in `radio`.** Radio init, TX and RX failures are
   reported through `logging::Error()` (a no-op in release). `sensor` and `power`
   are direct GPIO/register access with no runtime failure modes to report.
-- **The sensor sleeps in System ON (`WFI`), not System OFF.** `sleep::UntilEvent()`
-  parks the core and wakes on an input edge (GPIOTE) or the RTC heartbeat; the
-  WDT is configured to pause while the CPU is asleep, so a long sleep cannot
-  trip it. The core's `millis()` RTC1 is left untouched (RTC2 is used).
+- **The sensor sleeps in System ON, not System OFF.** `sleep::UntilEvent()`
+  wakes on an input edge (GPIOTE) or the heartbeat, and the WDT is configured
+  to pause while the CPU is asleep, so a long sleep cannot trip it. There are
+  two implementations, because the cores differ:
+  - **XIAO** (`SLEEP_TICKLESS`, Seeed/Adafruit core): the loop task blocks on
+    `ulTaskNotifyTake()` and the FreeRTOS tickless idle parks the CPU, so the
+    1 kHz RTOS tick does not keep restarting HFCLK. The GPIOTE edge notifies
+    the task; the notification timeout is the heartbeat. This is the difference
+    between ~250 µA and ~1 µA of sleep current.
+  - **DK** (no RTOS): RTC2 compare for the heartbeat plus a GPIOTE edge, parked
+    in raw `WFI` with the core's RTC1/`millis()` left untouched.
 
 ## Device lifecycle
 
@@ -80,14 +87,16 @@ setup()
    │
    ▼
 loop()  ── repeated forever ──
-      reason = sleep::UntilEvent()    WFI: input edge (GPIOTE) or RTC heartbeat
+       reason = sleep::UntilEvent()    input edge (GPIOTE) or heartbeat; the
+                                       XIAO blocks in the RTOS tickless idle,
+                                       the DK park in WFI on RTC2/GPIOTE
       power::KickWatchdog()
       ReportState(force = (reason == sleep::Wake::kRtc))
       radio::Sleep()
 ```
 
 The sensor reports **on change**, plus a periodic heartbeat
-(`config::kHeartbeatSeconds`, default 1 hour) so a gateway can tell it is alive.
+(`config::kHeartbeatSeconds`, default 2.5 minutes) so a gateway can tell it is alive.
 It stays in System ON sleep with the internal RTC running. Retained registers
 (`GPREGRET`) remember the last reported value across a power loss, and
 `ReportState()` only updates retained once a frame is actually on air.
@@ -113,9 +122,11 @@ loop()  ── repeated forever ──
       if radio::Available():
           Recv() → mesh::Handle()
               validate → IsDuplicate/Remember → enqueue
-              → decrement hops_left → radio::Send()
-              → StartReceive()  (Send leaves the radio in standby)
+               → decrement hops_left → radio::Send()
+          StartReceive()   re-arm RX on every path (Send leaves standby;
+                           Handle() may return without forwarding)
       DrainEvents()
+      telemetry::Poll()               status line every kStatusIntervalMs
 ```
 
 Routers never sleep. Every packet they receive is validated, checked against

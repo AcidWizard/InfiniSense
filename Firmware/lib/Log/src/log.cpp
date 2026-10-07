@@ -1,6 +1,7 @@
 #include "log.h"
 
-// log.cpp: serial output in debug builds, empty stubs otherwise.
+// log.cpp: serial output in debug builds. The LOG_* macros expand to nothing
+// when logging is disabled, so this file compiles to nothing in release.
 
 #if LOG_ENABLED
 
@@ -36,16 +37,6 @@ void Error(const char* format, ...) {
   Emit("ERROR", format, args);
   va_end(args);
 }
-
-}  // namespace logging
-
-#else
-
-namespace logging {
-
-void Begin() {}
-void Info(const char*, ...) {}
-void Error(const char*, ...) {}
 
 }  // namespace logging
 
